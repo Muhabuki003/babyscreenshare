@@ -345,20 +345,42 @@
     room.on(LivekitClient.RoomEvent.Disconnected, onDisconnected);
     room.on(LivekitClient.RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
     room.on(LivekitClient.RoomEvent.DataReceived, onDataReceived);
+    room.on(LivekitClient.RoomEvent.ConnectionStateChanged, onConnectionState);
 
     await room.connect(LIVEKIT_URL, token);
-    await room.localParticipant.setCameraEnabled(true);
-    await room.localParticipant.setMicrophoneEnabled(true);
+    
+    // Publish local tracks with user interaction guard
+    try {
+      await room.localParticipant.setCameraEnabled(true);
+    } catch(e) { console.warn('Camera not available:', e.message); }
+    try {
+      await room.localParticipant.setMicrophoneEnabled(true);
+    } catch(e) { console.warn('Mic not available:', e.message); }
 
-    // Show local video
+    // Show local video if available
     const localContainer = document.getElementById('localVideoContainer');
     localContainer.innerHTML = '';
-    if (room.localParticipant.videoTrackPublications.size > 0) {
-      const pub = Array.from(room.localParticipant.videoTrackPublications.values())[0];
+    room.localParticipant.videoTrackPublications.forEach(pub => {
       if (pub.videoTrack) {
         pub.videoTrack.attach(localContainer);
         document.getElementById('localPlaceholder').style.display = 'none';
       }
+    });
+  }
+
+  function onConnectionState(state) {
+    console.log('Connection state:', state);
+    if (state === 'connected') {
+      // Try to play all existing remote tracks (browser may block autoplay)
+      room.remoteParticipants.forEach(participant => {
+        participant.videoTrackPublications.forEach(pub => {
+          if (pub.videoTrack && pub.videoTrack.attachedElements.length) {
+            pub.videoTrack.attachedElements.forEach(el => {
+              el.play().catch(() => {});  // Silently fail if autoplay blocked
+            });
+          }
+        });
+      });
     }
   }
 
