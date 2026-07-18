@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>babyscreenshare</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@livekit/components-web@1.0.4/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0a0f; color: #fff;
+      min-height: 100vh; overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Landing */
+    #landing {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+      background: radial-gradient(ellipse at 50% 0%, #1a1a2e 0%, #0a0a0f 70%);
+    }
+    .landing-card {
+      max-width: 420px; width: 100%; text-align: center;
+    }
+    .landing-card .logo {
+      font-size: 32px; font-weight: 800; letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #f472b6, #a78bfa);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .landing-card .logo-sub {
+      font-size: 13px; color: #888; margin-bottom: 32px;
+    }
+    .landing-card h1 {
+      font-size: 22px; font-weight: 600; margin-bottom: 8px;
+    }
+    .landing-card p {
+      font-size: 14px; color: #999; line-height: 1.6; margin-bottom: 28px;
+    }
+    .room-input {
+      display: flex; gap: 8px; margin-bottom: 20px;
+    }
+    .room-input input {
+      flex: 1; padding: 14px 16px; border-radius: 12px;
+      border: 1px solid #2a2a3e; background: #14141f;
+      color: #fff; font-size: 15px; font-family: inherit;
+      outline: none; transition: border-color 0.2s;
+    }
+    .room-input input:focus { border-color: #a78bfa; }
+    .room-input input::placeholder { color: #555; }
+    .btn {
+      padding: 14px 24px; border-radius: 12px; border: none;
+      font-size: 14px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.2s; display: inline-flex;
+      align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #f472b6, #a78bfa);
+      color: #fff; min-width: 100px;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary {
+      background: #1e1e2e; color: #ccc; border: 1px solid #2a2a3e;
+    }
+    .btn-secondary:hover { background: #2a2a3e; }
+    .btn-full { width: 100%; }
+    .btn-icon { width: 48px; height: 48px; padding: 0; border-radius: 50%; font-size: 20px; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #ef4444; }
+    .or-divider {
+      display: flex; align-items: center; gap: 12px; margin: 16px 0;
+      color: #555; font-size: 12px;
+    }
+    .or-divider::before, .or-divider::after { flex: 1; height: 1px; background: #2a2a3e; content: ''; }
+    .quick-links { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .quick-link {
+      padding: 8px 16px; border-radius: 8px; background: #14141f;
+      border: 1px solid #2a2a3e; font-size: 12px; color: #888;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .quick-link:hover { border-color: #a78bfa; color: #fff; }
+
+    /* Call UI */
+    #call-ui { display: none; height: 100vh; flex-direction: column; }
+    #call-ui.active { display: flex; }
+
+    .call-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; background: #0a0a0f; border-bottom: 1px solid #1a1a2e;
+    }
+    .call-header .room-name {
+      font-size: 13px; font-weight: 500; color: #888;
+    }
+    .call-header .room-name strong { color: #fff; }
+
+    .call-grid {
+      flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+      gap: 4px; padding: 4px; background: #0a0a0f;
+      position: relative;
+    }
+    .call-grid.screen-share { grid-template-columns: 1fr; }
+    .call-grid .video-box {
+      position: relative; background: #14141f; border-radius: 8px;
+      overflow: hidden; min-height: 200px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .call-grid .video-box video {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .call-grid .video-box .label {
+      position: absolute; bottom: 8px; left: 8px;
+      font-size: 10px; font-weight: 500; color: rgba(255,255,255,0.5);
+      background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 4px;
+    }
+    .call-grid .video-box .placeholder {
+      font-size: 32px; color: #333;
+    }
+    .screen-share-box {
+      position: relative; background: #000; border-radius: 8px;
+      overflow: hidden; min-height: 300px; grid-column: 1 / -1;
+    }
+    .screen-share-box video { width: 100%; height: 100%; object-fit: contain; }
+
+    .pip-box {
+      position: absolute; bottom: 20px; right: 20px;
+      width: 160px; height: 120px; border-radius: 12px;
+      overflow: hidden; border: 2px solid #2a2a3e;
+      background: #14141f; z-index: 10;
+    }
+    .pip-box video { width: 100%; height: 100%; object-fit: cover; }
+
+    .call-controls {
+      display: flex; align-items: center; justify-content: center;
+      gap: 16px; padding: 16px 20px;
+      background: #0a0a0f; border-top: 1px solid #1a1a2e;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Connect / Waiting Overlay */
+    #waiting {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.8); z-index: 100;
+      align-items: center; justify-content: center; flex-direction: column;
+      gap: 16px; backdrop-filter: blur(8px);
+    }
+    #waiting.active { display: flex; }
+    #waiting .spinner {
+      width: 48px; height: 48px; border: 3px solid #2a2a3e;
+      border-top-color: #a78bfa; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #waiting p { font-size: 15px; color: #aaa; }
+    #waiting .cancel-btn {
+      margin-top: 12px; padding: 8px 20px; border-radius: 8px;
+      background: #2a2a3e; color: #fff; border: none;
+      font-size: 13px; cursor: pointer; font-family: inherit;
+    }
+
+    /* Incoming call */
+    #incoming {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85); z-index: 200;
+      align-items: center; justify-content: center; flex-direction: column;
+      gap: 20px; backdrop-filter: blur(12px);
+    }
+    #incoming.active { display: flex; }
+    #incoming .avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, #f472b6, #a78bfa);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    #incoming h2 { font-size: 20px; font-weight: 600; }
+    #incoming p { color: #888; font-size: 14px; }
+    #incoming .actions { display: flex; gap: 24px; }
+    .btn-answer {
+      width: 64px; height: 64px; border-radius: 50%; border: none;
+      background: #22c55e; color: #fff; font-size: 28px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-answer:hover { transform: scale(1.1); }
+    .btn-decline {
+      width: 64px; height: 64px; border-radius: 50%; border: none;
+      background: #ef4444; color: #fff; font-size: 28px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-decline:hover { transform: scale(1.1); }
+
+    /* Movie picker */
+    #movie-picker {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+      background: #14141f; border-top: 1px solid #2a2a3e;
+      border-radius: 20px 20px 0 0; padding: 20px;
+      transform: translateY(100%); transition: transform 0.3s ease;
+      max-height: 60vh; overflow-y: auto;
+    }
+    #movie-picker.active { transform: translateY(0); }
+    #movie-picker h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+    .movie-input {
+      width: 100%; padding: 12px 16px; border-radius: 10px;
+      border: 1px solid #2a2a3e; background: #0a0a0f;
+      color: #fff; font-size: 14px; font-family: inherit; margin-bottom: 12px;
+      outline: none;
+    }
+    .movie-input:focus { border-color: #a78bfa; }
+    .movie-results { display: flex; flex-direction: column; gap: 8px; }
+    .movie-result {
+      padding: 12px; border-radius: 10px; background: #1e1e2e;
+      display: flex; align-items: center; gap: 12px; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .movie-result:hover { background: #2a2a3e; }
+    .movie-result img {
+      width: 40px; height: 60px; border-radius: 4px; object-fit: cover;
+      background: #333;
+    }
+    .movie-result .info { flex: 1; }
+    .movie-result .info .title { font-size: 13px; font-weight: 500; }
+    .movie-result .info .year { font-size: 11px; color: #666; }
+
+    @media (max-width: 640px) {
+      .call-grid { grid-template-columns: 1fr; }
+      .call-grid.two-vids { grid-template-columns: 1fr; }
+      .pip-box { width: 100px; height: 75px; bottom: 10px; right: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Landing -->
+<div id="landing">
+  <div class="landing-card">
+    <div class="logo">🍼 babyscreenshare</div>
+    <div class="logo-sub">screen share + video call for two</div>
+    <h1>Watch together, apart</h1>
+    <p>Create or join a room to video call, share your screen, and watch movies together in sync.</p>
+    <div class="room-input">
+      <input id="roomInput" type="text" placeholder="Enter room name..." maxlength="30" autofocus>
+      <button class="btn btn-primary" onclick="joinRoom()">Join</button>
+    </div>
+    <div class="or-divider">or quick join</div>
+    <div class="quick-links">
+      <div class="quick-link" onclick="quickJoin('movie-night')">🎬 movie-night</div>
+      <div class="quick-link" onclick="quickJoin('date-night')">🌙 date-night</div>
+      <div class="quick-link" onclick="quickJoin('binge')">🍿 binge</div>
+    </div>
+  </div>
+</div>
+
+<!-- Waiting overlay -->
+<div id="waiting">
+  <div class="spinner"></div>
+  <p id="waitingText">Connecting to room...</p>
+  <button class="cancel-btn" onclick="cancelCall()">Cancel</button>
+</div>
+
+<!-- Incoming call -->
+<div id="incoming">
+  <div class="avatar">💕</div>
+  <h2>Your partner is calling</h2>
+  <p>Join the room to watch together</p>
+  <div class="actions">
+    <button class="btn-decline" onclick="declineCall()">✕</button>
+    <button class="btn-answer" onclick="answerCall()">✓</button>
+  </div>
+</div>
+
+<!-- Movie picker -->
+<div id="movie-picker">
+  <h3>🎬 Watch a Movie</h3>
+  <input class="movie-input" id="movieSearch" type="text" placeholder="Search movies..." oninput="searchMovies(this.value)">
+  <div class="movie-results" id="movieResults"></div>
+</div>
+
+<!-- Call UI -->
+<div id="call-ui">
+  <div class="call-header">
+    <div class="room-name">🍼 <strong id="displayRoom">babyscreenshare</strong></div>
+    <button class="btn btn-secondary" style="padding:8px 14px;font-size:12px;" onclick="toggleMoviePicker()">🎬 Add Movie</button>
+  </div>
+
+  <div class="call-grid" id="callGrid">
+    <div class="video-box" id="remoteVideoBox">
+      <div class="placeholder" id="remotePlaceholder">👤</div>
+      <div id="remoteVideoContainer"></div>
+      <div class="label" id="remoteLabel">Partner</div>
+    </div>
+    <div class="video-box" id="localVideoBox">
+      <div class="placeholder" id="localPlaceholder">📷</div>
+      <div id="localVideoContainer"></div>
+      <div class="label">You</div>
+    </div>
+    <div class="screen-share-box" id="screenShareBox" style="display:none;">
+      <div id="screenShareContainer"></div>
+      <div class="label" style="position:absolute;bottom:8px;left:8px;font-size:10px;color:rgba(255,255,255,0.5);background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;">📺 Screen Share</div>
+    </div>
+  </div>
+
+  <div class="call-controls">
+    <button class="btn btn-icon btn-secondary" id="micBtn" onclick="toggleMic()" title="Toggle Mic">🎤</button>
+    <button class="btn btn-icon btn-secondary" id="camBtn" onclick="toggleCam()" title="Toggle Camera">📹</button>
+    <button class="btn btn-icon btn-secondary" id="screenBtn" onclick="toggleScreenShare()" title="Share Screen">🖥️</button>
+    <button class="btn btn-icon btn-danger" onclick="leaveRoom()" title="End Call">📞</button>
+  </div>
+</div>
+
+<script>
+  // ── Config ──
+  const LIVEKIT_URL = 'wss://livekit.loveflix.us';
+
+  let room, localTrack, screenTrack;
+  let micEnabled = true, camEnabled = true;
+  let roomName = '';
+  let isCaller = false;
+  let isIncomingShowing = false;
+
+  // ── Room Logic ──
+  function quickJoin(name) { document.getElementById('roomInput').value = name; joinRoom(); }
+
+  async function joinRoom() {
+    const input = document.getElementById('roomInput').value.trim();
+    if (!input) return;
+    roomName = input;
+    isCaller = true;
+    showWaiting('Connecting to room...');
+    try { await connect(input); hideWaiting(); showCallUI(); }
+    catch (e) { hideWaiting(); alert('Failed to connect: ' + e.message); }
+  }
+
+  async function connect(roomName, token) {
+    if (!token) token = await getToken(roomName);
+    room = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
+      videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720 },
+    });
+
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, onTrackSubscribed);
+    room.on(LivekitClient.RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+    room.on(LivekitClient.RoomEvent.Disconnected, onDisconnected);
+    room.on(LivekitClient.RoomEvent.ParticipantDisconnected, onParticipantDisconnected);
+    room.on(LivekitClient.RoomEvent.DataReceived, onDataReceived);
+
+    await room.connect(LIVEKIT_URL, token);
+    await room.localParticipant.setCameraEnabled(true);
+    await room.localParticipant.setMicrophoneEnabled(true);
+
+    // Show local video
+    const localContainer = document.getElementById('localVideoContainer');
+    localContainer.innerHTML = '';
+    if (room.localParticipant.videoTrackPublications.size > 0) {
+      const pub = Array.from(room.localParticipant.videoTrackPublications.values())[0];
+      if (pub.videoTrack) {
+        pub.videoTrack.attach(localContainer);
+        document.getElementById('localPlaceholder').style.display = 'none';
+      }
+    }
+  }
+
+  async function getToken(roomName) {
+    // Try Loveflix token endpoint first, fallback to local generation
+    try {
+      const resp = await fetch('https://loveflix-eac.pages.dev/api/livekit-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomName, identity: 'baby_' + Math.random().toString(36).slice(2,8) })
+      });
+      if (!resp.ok) throw new Error('Token endpoint unavailable');
+      const data = await resp.json();
+      if (data.token || data.accessToken) return data.token || data.accessToken;
+    } catch(e) {}
+    // Fallback: tell user to connect via direct IP
+    throw new Error('LiveKit server not configured. Deploy LiveKit first, or both users connect to the same WiFi and use the direct IP.');
+  }
+
+  function onTrackSubscribed(track, publication, participant) {
+    const container = participant.identity?.includes('screen') || track.source === 'screen_share'
+      ? document.getElementById('screenShareContainer')
+      : document.getElementById('remoteVideoContainer');
+
+    if (track.source === 'screen_share' || participant.identity?.includes('screen')) {
+      document.getElementById('screenShareBox').style.display = 'block';
+      document.getElementById('screenShareContainer').innerHTML = '';
+      track.attach(document.getElementById('screenShareContainer'));
+      return;
+    }
+
+    document.getElementById('remotePlaceholder').style.display = 'none';
+    container.innerHTML = '';
+    track.attach(container);
+    document.getElementById('remoteLabel').textContent = participant.name || 'Partner';
+  }
+
+  function onTrackUnsubscribed(track, publication, participant) {
+    track.detach();
+  }
+
+  function onDisconnected() {
+    resetUI();
+  }
+
+  function onParticipantDisconnected(participant) {
+    document.getElementById('remoteVideoContainer').innerHTML = '';
+    document.getElementById('remotePlaceholder').style.display = 'flex';
+    document.getElementById('remoteLabel').textContent = 'Partner left';
+  }
+
+  function onDataReceived(data) {
+    const msg = JSON.parse(new TextDecoder().decode(data));
+    if (msg.type === 'ring') {
+      isIncomingShowing = true;
+      document.getElementById('incoming').classList.add('active');
+    }
+  }
+
+  // ── Controls ──
+  async function toggleMic() {
+    micEnabled = !micEnabled;
+    await room?.localParticipant.setMicrophoneEnabled(micEnabled);
+    document.getElementById('micBtn').style.opacity = micEnabled ? '1' : '0.4';
+  }
+
+  async function toggleCam() {
+    camEnabled = !camEnabled;
+    await room?.localParticipant.setCameraEnabled(camEnabled);
+    document.getElementById('camBtn').style.opacity = camEnabled ? '1' : '0.4';
+    if (!camEnabled) {
+      document.getElementById('localPlaceholder').style.display = 'flex';
+      document.getElementById('localVideoContainer').innerHTML = '';
+    }
+  }
+
+  async function toggleScreenShare() {
+    if (screenTrack) {
+      await room?.localParticipant.unpublishTrack(screenTrack);
+      screenTrack.detach();
+      screenTrack = null;
+      document.getElementById('screenShareBox').style.display = 'none';
+      document.getElementById('screenBtn').style.opacity = '1';
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      screenTrack = stream.getVideoTracks()[0];
+      screenTrack.onended = () => { toggleScreenShare(); };
+      await room?.localParticipant.publishTrack(screenTrack, { source: LivekitClient.TrackSource.SourceScreenShare });
+      document.getElementById('screenShareBox').style.display = 'block';
+      document.getElementById('screenShareContainer').innerHTML = '';
+      screenTrack.attach(document.getElementById('screenShareContainer'));
+      document.getElementById('screenBtn').style.opacity = '0.4';
+    } catch (e) { console.log('Screen share cancelled'); }
+  }
+
+  function leaveRoom() {
+    if (screenTrack) { screenTrack.detach(); screenTrack = null; }
+    room?.disconnect();
+    resetUI();
+    document.getElementById('landing').style.display = 'flex';
+  }
+
+  function cancelCall() {
+    hideWaiting();
+    if (room) leaveRoom();
+  }
+
+  function declineCall() {
+    isIncomingShowing = false;
+    document.getElementById('incoming').classList.remove('active');
+  }
+
+  async function answerCall() {
+    isIncomingShowing = false;
+    document.getElementById('incoming').classList.remove('active');
+    const input = document.getElementById('roomInput');
+    input.value = roomName;
+    await joinRoom();
+  }
+
+  // ── Movie Picker (vidsrc.to embed) ──
+  let moviePickerOpen = false;
+  function toggleMoviePicker() {
+    moviePickerOpen = !moviePickerOpen;
+    document.getElementById('movie-picker').classList.toggle('active', moviePickerOpen);
+  }
+
+  function searchMovies(query) {
+    if (!query) { document.getElementById('movieResults').innerHTML = '<div style="color:#666;font-size:13px;text-align:center;padding:12px;">Type to search movies</div>'; return; }
+    fetch(`https://api.themoviedb.org/3/search/movie?api_key=52076e6f9d90b08b47de0917bc389734&query=${encodeURIComponent(query)}`)
+      .then(r => r.json())
+      .then(data => {
+        const results = (data.results || []).slice(0, 8);
+        if (!results.length) { document.getElementById('movieResults').innerHTML = '<div style="color:#666;font-size:13px;text-align:center;padding:12px;">No results</div>'; return; }
+        document.getElementById('movieResults').innerHTML = results.map(m => `
+          <div class="movie-result" onclick="playMovie(${m.id}, '${m.title.replace(/'/g, "\\'")}', ${m.release_date ? m.release_date.slice(0,4) : 'N/A'})">
+            <img src="${m.poster_path ? 'https://image.tmdb.org/t/p/w92' + m.poster_path : 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 40 60%22><rect fill=%22%23333%22 width=%2240%22 height=%2260%22/><text x=%2220%22 y=%2235%22 text-anchor=%22middle%22 fill=%22%23666%22 font-size=%2220%22>🎬</text></svg>'}" alt="${m.title}">
+            <div class="info">
+              <div class="title">${m.title}</div>
+              <div class="year">${m.release_date ? m.release_date.slice(0,4) : 'N/A'} · ${(m.vote_average || 0).toFixed(1)}★</div>
+            </div>
+          </div>
+        `).join('');
+      })
+      .catch(() => { document.getElementById('movieResults').innerHTML = '<div style="color:#666;font-size:13px;">Search unavailable</div>'; });
+  }
+
+  function playMovie(id, title, year) {
+    toggleMoviePicker();
+    // Open vidsrc.to embed
+    const w = window.open('', '_blank');
+    w.document.write(`<html><head><style>body{margin:0;background:#000;overflow:hidden;display:flex;align-items:center;justify-content:center;height:100vh;}</style></head><body><iframe src="https://vidsrc.to/embed/movie/${id}" style="width:100%;height:100%;border:none;" allowfullscreen allow="autoplay"></iframe></body></html>`);
+    w.document.close();
+  }
+
+  // ── UI Helpers ──
+  function showWaiting(text) {
+    document.getElementById('waitingText').textContent = text || 'Connecting...';
+    document.getElementById('waiting').classList.add('active');
+  }
+  function hideWaiting() { document.getElementById('waiting').classList.remove('active'); }
+  function showCallUI() {
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('call-ui').classList.add('active');
+    document.getElementById('displayRoom').textContent = roomName;
+  }
+  function resetUI() {
+    document.getElementById('call-ui').classList.remove('active');
+    document.getElementById('landing').style.display = 'flex';
+    document.getElementById('remoteVideoContainer').innerHTML = '';
+    document.getElementById('localVideoContainer').innerHTML = '';
+    document.getElementById('screenShareContainer').innerHTML = '';
+    document.getElementById('screenShareBox').style.display = 'none';
+    document.getElementById('remotePlaceholder').style.display = 'flex';
+    document.getElementById('localPlaceholder').style.display = 'flex';
+    document.getElementById('micBtn').style.opacity = '1';
+    document.getElementById('camBtn').style.opacity = '1';
+    document.getElementById('screenBtn').style.opacity = '1';
+    document.getElementById('incoming').classList.remove('active');
+  }
+</script>
+</body>
+</html>
