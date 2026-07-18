@@ -363,24 +363,19 @@
   }
 
   async function getToken(roomName) {
-    // Try Loveflix token endpoint first, fallback to local generation
+    // Try the VPS token server first
     try {
-      const resp = await fetch('https://loveflix-eac.pages.dev/api/livekit-token', {
+      const resp = await fetch('http://167.233.38.96:7890/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomName,
-          identity: 'baby_' + Math.random().toString(36).slice(2,8),
-          access_token: 'babyscreenshare'  // shared secret for the baby app
-        })
+        body: JSON.stringify({ roomName, identity: 'baby_' + Math.random().toString(36).slice(2,8) })
       });
-      if (!resp.ok) throw new Error('Token endpoint error');
-      const data = await resp.json();
-      if (data.token || data.accessToken) return data.token || data.accessToken;
-      if (data.error) throw new Error(data.error);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.token) return data.token;
+      }
     } catch(e) {}
-    // Fallback: tell user to connect via direct IP
-    throw new Error('Could not get LiveKit token. Make sure the Loveflix API is deployed with LIVEKIT secrets set.');
+    throw new Error('Could not get LiveKit token. Token server unreachable.');
   }
 
   function onTrackSubscribed(track, publication, participant) {
