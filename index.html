@@ -368,14 +368,19 @@
       const resp = await fetch('https://loveflix-eac.pages.dev/api/livekit-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomName, identity: 'baby_' + Math.random().toString(36).slice(2,8) })
+        body: JSON.stringify({
+          roomName,
+          identity: 'baby_' + Math.random().toString(36).slice(2,8),
+          access_token: 'babyscreenshare'  // shared secret for the baby app
+        })
       });
-      if (!resp.ok) throw new Error('Token endpoint unavailable');
+      if (!resp.ok) throw new Error('Token endpoint error');
       const data = await resp.json();
       if (data.token || data.accessToken) return data.token || data.accessToken;
+      if (data.error) throw new Error(data.error);
     } catch(e) {}
     // Fallback: tell user to connect via direct IP
-    throw new Error('LiveKit server not configured. Deploy LiveKit first, or both users connect to the same WiFi and use the direct IP.');
+    throw new Error('Could not get LiveKit token. Make sure the Loveflix API is deployed with LIVEKIT secrets set.');
   }
 
   function onTrackSubscribed(track, publication, participant) {
