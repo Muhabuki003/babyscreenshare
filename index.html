@@ -365,7 +365,7 @@
   async function getToken(roomName) {
     // Try the VPS token server first
     try {
-      const resp = await fetch('http://167.233.38.96:7890/token', {
+      const resp = await fetch('https://livekit.loveflix.us/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomName, identity: 'baby_' + Math.random().toString(36).slice(2,8) })
