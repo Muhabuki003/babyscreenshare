@@ -371,29 +371,45 @@
     // Show local video if available
     const localContainer = document.getElementById('localVideoContainer');
     localContainer.innerHTML = '';
-    room.localParticipant.videoTrackPublications.forEach(pub => {
-      if (pub.videoTrack) {
-        pub.videoTrack.attach(localContainer);
-        document.getElementById('localPlaceholder').style.display = 'none';
+    if (room.localParticipant && room.localParticipant.videoTrackPublications) {
+      const pubs = room.localParticipant.videoTrackPublications;
+      if (pubs.forEach) {
+        pubs.forEach(pub => {
+          if (pub.videoTrack) {
+            pub.videoTrack.attach(localContainer);
+            document.getElementById('localPlaceholder').style.display = 'none';
+          }
+        });
+      } else if (pubs.size > 0) {
+        pubs.forEach(pub => {
+          if (pub.videoTrack) {
+            pub.videoTrack.attach(localContainer);
+            document.getElementById('localPlaceholder').style.display = 'none';
+          }
+        });
       }
-    });
+    }
   }
 
   function onConnectionState(state) {
     console.log('Connection state:', state);
     if (state === 'connected') {
       // Try to play all existing remote tracks (browser may block autoplay)
-      room.remoteParticipants.forEach(participant => {
-        participant.videoTrackPublications.forEach(pub => {
-          if (pub.videoTrack && pub.videoTrack.attachedElements && pub.videoTrack.attachedElements.length) {
-            pub.videoTrack.attachedElements.forEach(el => {
-              if (el && typeof el.play === 'function') {
-                el.play().catch(() => {});
+      if (room && room.remoteParticipants && room.remoteParticipants.forEach) {
+        room.remoteParticipants.forEach(participant => {
+          if (participant.videoTrackPublications && participant.videoTrackPublications.forEach) {
+            participant.videoTrackPublications.forEach(pub => {
+              if (pub.videoTrack && pub.videoTrack.attachedElements && pub.videoTrack.attachedElements.length) {
+                pub.videoTrack.attachedElements.forEach(el => {
+                  if (el && typeof el.play === 'function') {
+                    el.play().catch(() => {});
+                  }
+                });
               }
             });
           }
         });
-      });
+      }
     }
   }
 
