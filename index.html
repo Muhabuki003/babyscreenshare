@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>babyscreenshare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/@livekit/components-web@1.0.4/dist/index.umd.js"></script>
-  <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
+  <script src="https://unpkg.com/@livekit/components-web@1.4.0/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/livekit-client@1.15.0/dist/livekit-client.umd.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -409,12 +409,25 @@
       document.getElementById('screenShareBox').style.display = 'block';
       document.getElementById('screenShareContainer').innerHTML = '';
       track.attach(document.getElementById('screenShareContainer'));
+      // Play manually after attach to avoid SDK autoplay crash
+      setTimeout(() => {
+        document.getElementById('screenShareContainer').querySelector('video')?.play().catch(() => {});
+      }, 100);
       return;
     }
 
     document.getElementById('remotePlaceholder').style.display = 'none';
     container.innerHTML = '';
-    track.attach(container);
+    // Attach to a wrapper div that we control, not directly
+    const wrapper = document.createElement('div');
+    wrapper.style.width = '100%';
+    wrapper.style.height = '100%';
+    container.appendChild(wrapper);
+    track.attach(wrapper);
+    // Wait a tick then play manually
+    setTimeout(() => {
+      wrapper.querySelector('video')?.play().catch(() => {});
+    }, 100);
     document.getElementById('remoteLabel').textContent = participant.name || 'Partner';
   }
 
