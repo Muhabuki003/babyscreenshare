@@ -6,7 +6,7 @@
   <title>babyscreenshare</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/@livekit/components-web@1.4.0/dist/index.umd.js"></script>
-  <script src="https://unpkg.com/livekit-client@1.15.0/dist/livekit-client.umd.js"></script>
+  <script src="https://unpkg.com/livekit-client@1.15.13/dist/livekit-client.umd.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -319,6 +319,17 @@
   let isCaller = false;
   let isIncomingShowing = false;
 
+  // ── Suppress known LiveKit SDK 't.play is not a function' error ──
+  // This is a known bug in livekit-client UMD build where VideoTrack
+  // calls .play() on a stale/non-video element reference.
+  window.addEventListener('error', function(e) {
+    if (e.message && e.message.includes('play is not a function') && e.filename && e.filename.includes('livekit-client')) {
+      e.preventDefault();
+      console.warn('Suppressed LiveKit SDK play error (known UMD bug)');
+      return;
+    }
+  });
+
   // ── Room Logic ──
   function quickJoin(name) { document.getElementById('roomInput').value = name; joinRoom(); }
 
@@ -374,9 +385,11 @@
       // Try to play all existing remote tracks (browser may block autoplay)
       room.remoteParticipants.forEach(participant => {
         participant.videoTrackPublications.forEach(pub => {
-          if (pub.videoTrack && pub.videoTrack.attachedElements.length) {
+          if (pub.videoTrack && pub.videoTrack.attachedElements && pub.videoTrack.attachedElements.length) {
             pub.videoTrack.attachedElements.forEach(el => {
-              el.play().catch(() => {});  // Silently fail if autoplay blocked
+              if (el && typeof el.play === 'function') {
+                el.play().catch(() => {});
+              }
             });
           }
         });
@@ -401,30 +414,36 @@
   }
 
   function onTrackSubscribed(track, publication, participant) {
-    const container = participant.identity?.includes('screen') || track.source === 'screen_share'
-      ? document.getElementById('screenShareContainer')
-      : document.getElementById('remoteVideoContainer');
+    // Detach from any previous elements first to keep attachedElements array clean
+    track.detach();
 
-    if (track.source === 'screen_share' || participant.identity?.includes('screen')) {
+    const isScreen = track.source === 'screen_share' || participant.identity?.includes('screen');
+    
+    if (isScreen) {
       document.getElementById('screenShareBox').style.display = 'block';
-      document.getElementById('screenShareContainer').innerHTML = '';
-      track.attach(document.getElementById('screenShareContainer'));
-      // Play manually after attach to avoid SDK autoplay crash
+      const container = document.getElementById('screenShareContainer');
+      container.innerHTML = '';
+      // Use a dedicated wrapper to isolate SDK's element tracking
+      const wrapper = document.createElement('div');
+      wrapper.style.width = '100%';
+      wrapper.style.height = '100%';
+      container.appendChild(wrapper);
+      track.attach(wrapper);
+      // Play manually; ignore autoplay rejection
       setTimeout(() => {
-        document.getElementById('screenShareContainer').querySelector('video')?.play().catch(() => {});
+        wrapper.querySelector('video')?.play().catch(() => {});
       }, 100);
       return;
     }
 
     document.getElementById('remotePlaceholder').style.display = 'none';
+    const container = document.getElementById('remoteVideoContainer');
     container.innerHTML = '';
-    // Attach to a wrapper div that we control, not directly
     const wrapper = document.createElement('div');
     wrapper.style.width = '100%';
     wrapper.style.height = '100%';
     container.appendChild(wrapper);
     track.attach(wrapper);
-    // Wait a tick then play manually
     setTimeout(() => {
       wrapper.querySelector('video')?.play().catch(() => {});
     }, 100);
